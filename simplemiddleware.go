@@ -61,6 +61,10 @@ func (m *middleware) Handle(handler http.HandlerFunc) http.HandlerFunc {
 			}
 			token := Token(*t)
 			key, err := m.keyFunc(&token)
+			if err != nil {
+				m.errFunc(w, fmt.Errorf("failed to parse token: %s", err))
+				return
+			}
 			if err := t.Valid(key); err == nil {
 				handler(w, r)
 			} else {
@@ -79,7 +83,7 @@ func (m *middleware) Handle(handler http.HandlerFunc) http.HandlerFunc {
 func (m *middleware) Extract(r *http.Request) (tkn string) {
 	h := r.Header.Get(m.hdr)
 	if len(h) >= 7 && strings.EqualFold(h[:7], "BEARER ") {
-		tkn = h[:7]
+		tkn = h[7:]
 	}
 	return
 }
