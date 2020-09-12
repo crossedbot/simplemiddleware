@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"encoding/base64"
-	"strings"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -57,32 +55,6 @@ hPHNe224A/Xn4SFCrqMikraHN64gscxhwcUCYkcwO9OcK5VKLcDqtfEs50nsjKV/
 aQIDAQAB
 -----END PUBLIC KEY-----`
 
-// encode encodes the given data as a base64 URL encoded string without the
-// padding.
-func encode(v []byte) string {
-	return strings.TrimRight(base64urlEncode(v), "=")
-}
-
-// base64urlEncode returns the base64 encoded string for the given data.
-func base64urlEncode(v []byte) string {
-	return base64.URLEncoding.EncodeToString(v)
-}
-
-// base64urlDecode returns the bytes for the given base64 encoded string.
-func base64urlDecode(s string) ([]byte, error) {
-	return base64.URLEncoding.DecodeString(s)
-}
-
-// decode decodes the given string; assuming it is a base64 URL encoded string
-// without padding.
-func decode(s string) ([]byte, error) {
-	if l := len(s) % 4; l > 0 {
-		padding := strings.Repeat("=", 4-l)
-		s = fmt.Sprintf("%s%s", s, padding)
-	}
-	return base64urlDecode(s)
-}
-
 func TestMiddlewareHandler(t *testing.T) {
 	keyFunc := KeyFunc(func(token *Token) ([]byte, error) {
 		return []byte(testPublicKey), nil
@@ -98,9 +70,9 @@ func TestMiddlewareHandler(t *testing.T) {
 		Issuer:         "issuer",
 		Subject:        "subject",
 		Audience:       "audience",
-		ExpirationTime: 1588732200,
-		NotBefore:      1588473060,
-		IssuedAt:       1588473060,
+		ExpirationTime: time.Now().Add(1 * time.Hour).Unix(),
+		NotBefore:      time.Now().Add(-1 * time.Hour).Unix(),
+		IssuedAt:       time.Now().Add(-1 * time.Hour).Unix(),
 	}
 	token := jwt.New(claims, algorithms.AlgorithmRS256)
 	bearer, err := token.Sign([]byte(testPrivateKey))
@@ -108,9 +80,11 @@ func TestMiddlewareHandler(t *testing.T) {
 	bearer = fmt.Sprintf("Bearer %s", bearer)
 	r.Header.Set(hdr, bearer)
 	m := New(hdr, keyFunc, errFunc)
-	handler := m.Handle(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
+	handler := m.Handle(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+	)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, r)
 	require.Equal(t, http.StatusOK, rr.Code)
