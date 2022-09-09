@@ -11,15 +11,15 @@ import (
 )
 
 const (
-	AuthHeader     = "Authorization"
-	ClaimUserId    = "uid"
-	ClaimGrantType = "grant_type"
+	AuthHeader  = "Authorization"
+	ClaimUserId = "uid"
+	ClaimGrant  = "grant"
 )
 
 var (
-	ErrClaimDataType     = errors.New("claim is not a string")
-	ErrGrantTypeDataType = errors.New("grant type claim is not a string")
-	ErrUserIdDataType    = errors.New("user ID claim is not a string")
+	ErrClaimDataType  = errors.New("claim is not a string")
+	ErrGrantDataType  = errors.New("grant claim is not a string")
+	ErrUserIdDataType = errors.New("user ID claim is not a string")
 )
 
 var publicAuthKey []byte
@@ -32,9 +32,9 @@ var SetClaimUserId = func(id string) {
 	claimUserId = id
 }
 
-var claimGrantType = ClaimGrantType
-var SetClaimGrantType = func(grant string) {
-	claimGrantType = grant
+var claimGrant = ClaimGrant
+var SetClaimGrant = func(grant string) {
+	claimGrant = grant
 }
 
 var authOnce sync.Once
@@ -65,17 +65,17 @@ func Authorize(handler server.Handler) server.Handler {
 			}, http.StatusUnauthorized)
 			return
 		}
-		grantType, err := getClaimFromRequest(claimGrantType, r)
-		if err != nil || grantType == "" {
+		grant, err := getClaimFromRequest(claimGrant, r)
+		if err != nil || grant == "" {
 			server.JsonResponse(w, server.Error{
 				Code:    server.ErrUnauthorizedCode,
-				Message: "grant type is missing or invalid",
+				Message: "grant is missing or invalid",
 			}, http.StatusUnauthorized)
 			return
 		}
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, claimUserId, userId)
-		ctx = context.WithValue(ctx, claimGrantType, grantType)
+		ctx = context.WithValue(ctx, claimGrant, grant)
 		r = r.WithContext(ctx)
 		handler(w, r, p)
 	})

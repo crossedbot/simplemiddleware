@@ -59,8 +59,8 @@ func TestAuthorize(t *testing.T) {
 	r, err := http.NewRequest(http.MethodGet, "/test", nil)
 	require.Nil(t, err)
 	claims := simplejwt.CustomClaims{
-		claimUserId:    "myuserid :3",
-		claimGrantType: "givemeaccess!",
+		claimUserId: "myuserid :3",
+		claimGrant:  "givemeaccess!",
 		"exp": time.Now().Local().Add(
 			time.Hour * time.Duration(24),
 		).Unix(),
@@ -90,10 +90,10 @@ func TestAuthorize(t *testing.T) {
 
 func TestGetClaimFromRequest(t *testing.T) {
 	expectedUserId := "myuserid :3"
-	expectedGrantType := "givemeaccess!"
+	expectedGrant := "givemeaccess!"
 	claims := simplejwt.CustomClaims{
-		claimUserId:    expectedUserId,
-		claimGrantType: expectedGrantType,
+		claimUserId: expectedUserId,
+		claimGrant:  expectedGrant,
 		"exp": time.Now().Local().Add(
 			time.Hour * time.Duration(24),
 		).Unix(),
@@ -109,7 +109,7 @@ func TestGetClaimFromRequest(t *testing.T) {
 	actual, err := getClaimFromRequest(claimUserId, r)
 	require.Nil(t, err)
 	require.Equal(t, expectedUserId, actual)
-	actual, err = getClaimFromRequest(claimGrantType, r)
+	actual, err = getClaimFromRequest(claimGrant, r)
 	require.Nil(t, err)
-	require.Equal(t, expectedGrantType, actual)
+	require.Equal(t, expectedGrant, actual)
 }
