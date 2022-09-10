@@ -60,6 +60,7 @@ func TestAuthorize(t *testing.T) {
 	require.Nil(t, err)
 	claims := simplejwt.CustomClaims{
 		claimUserId: "myuserid :3",
+		claimGrant:  "givemeaccess!",
 		"exp": time.Now().Local().Add(
 			time.Hour * time.Duration(24),
 		).Unix(),
@@ -87,10 +88,12 @@ func TestAuthorize(t *testing.T) {
 	require.Equal(t, "", rr.Body.String())
 }
 
-func TestGetUserIdFromRequest(t *testing.T) {
-	expected := "myuserid :3"
+func TestGetClaimFromRequest(t *testing.T) {
+	expectedUserId := "myuserid :3"
+	expectedGrant := "givemeaccess!"
 	claims := simplejwt.CustomClaims{
-		claimUserId: expected,
+		claimUserId: expectedUserId,
+		claimGrant:  expectedGrant,
 		"exp": time.Now().Local().Add(
 			time.Hour * time.Duration(24),
 		).Unix(),
@@ -103,7 +106,10 @@ func TestGetUserIdFromRequest(t *testing.T) {
 	r.Header.Set(hdr, fmt.Sprintf("Bearer %s", tkn))
 	SetAuthPublicKey([]byte(testPublicKey))
 	require.Nil(t, err)
-	actual, err := getUserIdFromRequest(r)
+	actual, err := getClaimFromRequest(claimUserId, r)
 	require.Nil(t, err)
-	require.Equal(t, expected, actual)
+	require.Equal(t, expectedUserId, actual)
+	actual, err = getClaimFromRequest(claimGrant, r)
+	require.Nil(t, err)
+	require.Equal(t, expectedGrant, actual)
 }
