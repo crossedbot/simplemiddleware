@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"sync"
 
 	"github.com/crossedbot/common/golang/server"
 	jwt "github.com/crossedbot/simplejwt"
@@ -37,22 +36,21 @@ var SetClaimGrant = func(grant string) {
 	claimGrant = grant
 }
 
-var authOnce sync.Once
-var authenticator = func() (mw Middleware) {
-	authOnce.Do(func() {
-		keyFunc := func(token *Token) ([]byte, error) {
-			return publicAuthKey, nil
-		}
-		errFunc := func(w http.ResponseWriter, err error) {
-			server.JsonResponse(w, server.Error{
-				Code:    server.ErrUnauthorizedCode,
-				Message: err.Error(),
-			}, http.StatusUnauthorized)
-		}
-		mw = New(AuthHeader, keyFunc, errFunc)
-	})
-	return
-}()
+var authenticator = New(
+	AuthHeader,
+	func(token *Token) ([]byte, error) {
+		return publicAuthKey, nil
+	},
+	func(w http.ResponseWriter, err error) {
+		server.JsonResponse(w, server.Error{
+			Code:    server.ErrUnauthorizedCode,
+			Message: err.Error(),
+		}, http.StatusUnauthorized)
+	},
+)
+var SetAuthenticator = func(mw Middleware) {
+	authenticator = mw
+}
 
 func Authorize(handler server.Handler) server.Handler {
 	h := authenticator.Handle(func(w http.ResponseWriter, r *http.Request) {
