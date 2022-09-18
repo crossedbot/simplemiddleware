@@ -26,11 +26,18 @@ type ErrFunc func(w http.ResponseWriter, err error)
 
 // Middleware represents an interface to a middleware object.
 type Middleware interface {
+	// Extract extracts a bearer token from a request.
+	Extract(r *http.Request) (tkn string)
+
 	// Handle wraps the given handler for validating a request via a JWT.
 	Handle(handler http.HandlerFunc) http.HandlerFunc
 
-	// Extract extracts a bearer token from a request.
-	Extract(r *http.Request) (tkn string)
+	// SetErrFunc sets the function for handling errors during  JWT
+	// validation.
+	SetErrFunc(fn ErrFunc)
+
+	// SetKeyFunc sets the function for retrieving the JWT's public key.
+	SetKeyFunc(fn KeyFunc)
 }
 
 // middleware represent a middleware object; wrapping HTTP handlers for the
@@ -48,6 +55,16 @@ func New(header string, keyFunc KeyFunc, errFunc ErrFunc) Middleware {
 		keyFunc: keyFunc,
 		errFunc: errFunc,
 	}
+}
+
+// Extract extracts a bearer token from a request. If no bearer token is
+// found, an empty string is returned.
+func (m *middleware) Extract(r *http.Request) (tkn string) {
+	h := r.Header.Get(m.hdr)
+	if len(h) >= 7 && strings.EqualFold(h[:7], "BEARER ") {
+		tkn = h[7:]
+	}
+	return
 }
 
 // Handle wraps the given handler for validating a request via a JWT.
@@ -78,12 +95,10 @@ func (m *middleware) Handle(handler http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-// Extract extracts a bearer token from a request. If no bearer token is
-// found, an empty string is returned.
-func (m *middleware) Extract(r *http.Request) (tkn string) {
-	h := r.Header.Get(m.hdr)
-	if len(h) >= 7 && strings.EqualFold(h[:7], "BEARER ") {
-		tkn = h[7:]
-	}
-	return
+func (m *middleware) SetErrFunc(fn ErrFunc) {
+	m.errFunc = fn
+}
+
+func (m *middleware) SetKeyFunc(fn KeyFunc) {
+	m.keyFunc = fn
 }

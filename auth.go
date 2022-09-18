@@ -48,8 +48,11 @@ var authenticator = New(
 		}, http.StatusUnauthorized)
 	},
 )
-var SetAuthenticator = func(mw Middleware) {
-	authenticator = mw
+var SetKeyFunc = func(fn KeyFunc) {
+	authenticator.SetKeyFunc(fn)
+}
+var SetErrFunc = func(fn ErrFunc) {
+	authenticator.SetErrFunc(fn)
 }
 
 func Authorize(handler server.Handler) server.Handler {
